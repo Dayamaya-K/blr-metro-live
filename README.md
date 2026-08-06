@@ -108,6 +108,16 @@ part). The page re-polls every 3 minutes, and also on `visibilitychange`,
 `focus`, and bfcache `pageshow`, so a tab left open since morning can't keep
 showing a frozen all-clear. Alert ages re-render every minute.
 
+**`signals.json` and `advisories.json` are fetched from
+`raw.githubusercontent.com`, not from the deployed copy.** A Pages deploy on
+this repo measured 10+ minutes end to end, which is useless for "is the metro
+broken right now", and a 15-minute scan cadence would have queued ~96 deploys
+a day. Raw serves with a 5-minute cache, so a scan result — or an advisory you
+hand-edit straight on GitHub — is live in about five minutes with no deploy at
+all. The app falls back to the deployed copy if raw is unreachable, which is
+also what makes local development work. Note this ties the app to the repo
+path in `RAW_DATA_BASE` (js/app.js); update it if you fork or rename.
+
 Known limits, deliberately visible rather than hidden: GitHub's scheduled runs
 are best-effort and can lag 10+ minutes (hence always showing the scan time);
 news lags the incident itself, so @OfficialBMRCL is linked from every warning;

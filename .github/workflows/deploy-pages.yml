@@ -13,8 +13,13 @@ name: Deploy to Pages
 on:
   push:
     branches: [main]
+  # Only the daily data refresh needs a redeploy. The 15-minute disruption
+  # scan deliberately does NOT trigger one: the page reads signals.json and
+  # advisories.json from raw.githubusercontent.com instead, which is live in
+  # ~5 min instead of the 10+ min a Pages deploy takes here — and it keeps us
+  # from queueing ~96 deploys a day behind each other.
   workflow_run:
-    workflows: ["Scan for disruptions", "Refresh timetable data"]
+    workflows: ["Refresh timetable data"]
     types: [completed]
   workflow_dispatch:
 

@@ -601,13 +601,29 @@ function classifyAlert(it, now) {
   return { ...it, state: "active", at: from };
 }
 
+// Alert data is read straight from the repo's raw endpoint rather than from
+// the deployed copy. A GitHub Pages deploy on this repo takes 10+ minutes,
+// which is far too slow for "is the metro broken right now"; raw is served
+// with a 5-minute cache, so a scan (or a hand-edited advisory) goes live in
+// about that. Everything else — timetable, geometry, news — changes daily at
+// most and rides along with the normal deploy.
+const RAW_DATA_BASE =
+  "https://raw.githubusercontent.com/Dayamaya-K/blr-metro-live/main/data";
+
 async function loadAlerts() {
+  // raw first, then the deployed copy (covers offline/local dev, a renamed
+  // repo, or raw.githubusercontent.com being unreachable)
   const grab = async (file) => {
-    try {
-      return await (await fetch(`data/${file}?t=${Date.now()}`, { cache: "no-store" })).json();
-    } catch {
-      return null;
+    for (const base of [RAW_DATA_BASE, "data"]) {
+      try {
+        const res = await fetch(`${base}/${file}?t=${Date.now()}`, { cache: "no-store" });
+        if (!res.ok) continue;
+        return await res.json();
+      } catch {
+        /* try the next source */
+      }
     }
+    return null;
   };
   const [adv, sig] = await Promise.all([grab("advisories.json"), grab("signals.json")]);
   const now = Date.now();
