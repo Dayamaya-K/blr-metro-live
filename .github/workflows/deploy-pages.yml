@@ -47,8 +47,19 @@ jobs:
       - uses: actions/configure-pages@v5
         with:
           enablement: true
+      # Publish only what the site actually serves. `path: .` would also tar
+      # up .git, tools/ and .github/, which bloats the artifact for no reason.
+      - name: Stage site files
+        run: |
+          mkdir -p _site
+          cp -R index.html css js data _site/
+          du -sh _site
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
       - id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # Default is 10 min, and Pages deploys on this repo have measured
+          # 8-10+ min — runs #2 and #3 both died on "Timeout reached, aborting!"
+          timeout: 1800000
