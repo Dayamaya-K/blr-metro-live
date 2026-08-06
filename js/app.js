@@ -1,7 +1,8 @@
 "use strict";
 // Map + UI. Requires Leaflet, SERVICE (service.js), LineSim (sim.js).
 
-const TICK_MS = 250;
+const SLOW_MS = 250;     // cadence for panel text (clock, counts, slider)
+const POPUP_MS = 400;    // cadence for an open train popup's content
 const LABEL_ZOOM = 14;
 
 // official-ish line colours tuned for contrast on the cream basemap
@@ -14,6 +15,8 @@ const state = {
   simMs: Date.now(),
   lastTick: performance.now(),
   scrubbing: false,
+  lastSlow: 0,
+  showLabels: localStorage.getItem("blrml.labels") !== "0",
   sims: [],
   enabled: {},
   markers: new Map(),  // train key -> { marker, wrap, train }
@@ -97,12 +100,6 @@ L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
   maxZoom: 19,
 }).addTo(map);
 
-// marker transitions look wrong while the map is zooming — suspend them
-map.on("zoomstart", () => document.body.classList.add("no-anim"));
-map.on("zoomend", () =>
-  setTimeout(() => document.body.classList.remove("no-anim"), 60)
-);
-
 // top-down train glyph, nose pointing up; rotated to the heading
 function trainIcon(color) {
   const svg =
@@ -137,16 +134,16 @@ function popupHtml(t) {
   );
 }
 
-function upsertTrain(t) {
+function upsertTrain(t, now) {
   let rec = state.markers.get(t.key);
   if (!rec) {
     const marker = L.marker([t.lat, t.lon], {
       icon: trainIcon(t.color),
       keyboard: false,
     });
-    marker.bindPopup("", { closeButton: false, offset: [0, -8] });
+    marker.bindPopup(popupHtml(t), { closeButton: false, offset: [0, -8] });
     marker.addTo(state.groups[t.lineId]);
-    rec = { marker, wrap: null, train: t };
+    rec = { marker, wrap: null, train: t, popupAt: 0 };
     state.markers.set(t.key, rec);
   } else {
     rec.marker.setLatLng([t.lat, t.lon]);
@@ -163,7 +160,11 @@ function upsertTrain(t) {
     rec.marker.setOpacity(dim ? 0.4 : 1);
     rec.dim = dim;
   }
-  rec.marker.getPopup().setContent(popupHtml(t));
+  // content refresh only matters while the popup is open, and not per-frame
+  if (rec.marker.isPopupOpen() && now - rec.popupAt >= POPUP_MS) {
+    rec.popupAt = now;
+    rec.marker.setPopupContent(popupHtml(t));
+  }
 }
 
 // ---------- station departure card ----------
@@ -249,7 +250,7 @@ function renderBoards(info) {
 // ---------- station labels: hover tips zoomed out, printed labels zoomed in ----------
 
 function refreshLabels() {
-  const show = map.getZoom() >= LABEL_ZOOM;
+  const show = state.showLabels && map.getZoom() >= LABEL_ZOOM;
   for (const rec of state.stationMarkers) {
     if (rec.labeled === show) continue;
     rec.marker.unbindTooltip();
@@ -263,6 +264,16 @@ function refreshLabels() {
   }
 }
 map.on("zoomend", refreshLabels);
+
+function wireLabelsToggle() {
+  const box = document.getElementById("labels-toggle");
+  box.checked = state.showLabels;
+  box.addEventListener("change", () => {
+    state.showLabels = box.checked;
+    localStorage.setItem("blrml.labels", box.checked ? "1" : "0");
+    refreshLabels();
+  });
+}
 
 // ---------- boot ----------
 
@@ -358,6 +369,7 @@ async function boot() {
 
   buildFutureLines(net.future ?? []);
   wirePanelToggle();
+  wireLabelsToggle();
   wireControls();
   wireSearch();
   wireTimetable();
@@ -378,8 +390,8 @@ async function boot() {
     if (e.persisted) loadAlerts(); // restored from back/forward cache
   });
   setInterval(renderAlerts, 60 * 1000); // keep the "X min ago" wording current
-  setInterval(tick, TICK_MS);
-  tick();
+  state.lastTick = performance.now();
+  requestAnimationFrame(frame);
 }
 
 // ---------- panel collapse (phones start collapsed so the map is visible) ----------
@@ -923,9 +935,12 @@ function wireControls() {
 
 // ---------- main loop ----------
 
-function tick() {
-  const now = performance.now();
-  const dt = now - state.lastTick;
+// Positions update every animation frame so trains glide instead of hopping
+// between 250 ms ticks; panel text (clock, counts, slider) only needs the
+// slower cadence.
+function frame(now) {
+  // rAF pauses in background tabs — clamp dt so sim mode doesn't leap on return
+  const dt = Math.min(now - state.lastTick, 1000);
   state.lastTick = now;
 
   if (state.live) state.simMs = Date.now();
@@ -933,25 +948,17 @@ function tick() {
 
   const info = fullInfo(state.simMs);
   const alive = new Set();
-  let total = 0;
+  const counts = {};
 
   for (const sim of state.sims) {
     const id = sim.line.id;
-    let count = 0;
+    counts[id] = 0;
     if (state.enabled[id]) {
       for (const t of sim.trainsAt(info)) {
-        upsertTrain(t);
+        upsertTrain(t, now);
         alive.add(t.key);
-        count++;
+        counts[id]++;
       }
-    }
-    total += count;
-    const countEl = document.getElementById(`count-${id}`);
-    if (countEl) countEl.textContent = count;
-    const hwEl = document.getElementById(`hw-${id}`);
-    if (hwEl) {
-      const hw = sim.headwayNow(info);
-      hwEl.textContent = hw === "service ended" && count > 0 ? "last trains" : hw;
     }
   }
 
@@ -962,6 +969,27 @@ function tick() {
       state.groups[rec.train.lineId].removeLayer(rec.marker);
       state.markers.delete(key);
     }
+
+  if (now - state.lastSlow >= SLOW_MS) {
+    state.lastSlow = now;
+    slowUpdates(info, counts);
+  }
+  requestAnimationFrame(frame);
+}
+
+function slowUpdates(info, counts) {
+  let total = 0;
+  for (const sim of state.sims) {
+    const id = sim.line.id;
+    total += counts[id];
+    const countEl = document.getElementById(`count-${id}`);
+    if (countEl) countEl.textContent = counts[id];
+    const hwEl = document.getElementById(`hw-${id}`);
+    if (hwEl) {
+      const hw = sim.headwayNow(info);
+      hwEl.textContent = hw === "service ended" && counts[id] > 0 ? "last trains" : hw;
+    }
+  }
 
   document.getElementById("clock").textContent = info.clock;
   document.getElementById("date-label").textContent = `${info.dateLabel} · IST`;

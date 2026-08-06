@@ -29,6 +29,22 @@ function haversineM(aLat, aLon, bLat, bLon) {
   return 2 * R * Math.asin(Math.sqrt(s));
 }
 
+// Trapezoidal velocity profile for one station-to-station run: accelerate for
+// the first RAMP of the run time, cruise, brake for the last RAMP — so trains
+// pull away and glide into platforms instead of moving at constant speed.
+// Input/output are normalised 0..1 (time -> distance); the areas work out so
+// s(1) = 1 exactly.
+const RAMP = 0.28;
+function easeRun(u) {
+  const p = RAMP;
+  const v = 1 / (1 - p); // cruise speed that makes the distances sum to 1
+  if (u <= 0) return 0;
+  if (u >= 1) return 1;
+  if (u < p) return (v * u * u) / (2 * p);
+  if (u > 1 - p) return 1 - (v * (1 - u) * (1 - u)) / (2 * p);
+  return v * (u - p / 2);
+}
+
 // GTFS service classes: monday / weekday (Tue-Sat) / sunday / holiday
 function schedDayKey(desc, holidays) {
   if (holidays.includes(desc.ymd)) return "holiday";
@@ -96,7 +112,7 @@ class LineSim {
     if (e < dep[i]) {
       return { chain: sts[i].d, nextIdx: i + 1, dwelling: true, eta: arr[i + 1] - e };
     }
-    const f = (e - dep[i]) / (arr[i + 1] - dep[i]);
+    const f = easeRun((e - dep[i]) / (arr[i + 1] - dep[i]));
     const chain = sts[i].d + (sts[i + 1].d - sts[i].d) * f;
     return { chain, nextIdx: i + 1, dwelling: false, eta: arr[i + 1] - e };
   }

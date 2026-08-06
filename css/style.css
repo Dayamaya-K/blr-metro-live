@@ -295,6 +295,9 @@ html, body {
 .future-row.planned .dash { border-top-style: dotted; opacity: 0.5; }
 .future-note { color: var(--muted); font-size: 10.5px; }
 
+#labels-row { border-top: 2px solid var(--ink); margin-top: 6px; padding-top: 8px; }
+#labels-row .hw { margin-left: auto; }
+
 #total-count { color: var(--muted); font-size: 12px; font-weight: 500; margin: 6px 0 2px; }
 
 #credit { margin-top: 8px; color: var(--muted); font-size: 10.5px; }
@@ -560,8 +563,7 @@ html, body {
 /* ---------- train markers ---------- */
 
 .train-icon { background: transparent; border: none; }
-.leaflet-marker-icon.train-icon { transition: transform 0.25s linear; }
-body.no-anim .leaflet-marker-icon.train-icon { transition: none; }
+/* no CSS transition: positions are set every animation frame by the rAF loop */
 .train-wrap { width: 24px; height: 24px; filter: drop-shadow(1.5px 1.5px 0 rgba(20, 17, 14, 0.4)); }
 
 /* station labels (permanent, zoomed in) */

@@ -57,6 +57,11 @@ Also set **Settings → Actions → General → Workflow permissions** to
   the › on an operational line, for the latest headlines about that corridor
   (source + age, links out), plus a live news-search link.
 - **Time travel** — scrub the day, play at 10×/60×/300×, jump back to LIVE.
+- **Physical motion** — positions render every animation frame, and each
+  station-to-station run follows a trapezoidal speed profile (accelerate,
+  cruise ~55 km/h, brake into the platform) instead of constant-speed hops.
+- **Station names toggle** — printed labels (zoom ≥ 14) can be switched off;
+  the preference persists in localStorage, hover tooltips always work.
 - **Timetable view** — the exact service pattern in use, per line and day
   type, linked to official sources.
 
