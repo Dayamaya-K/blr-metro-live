@@ -1,0 +1,49 @@
+# Scans the news for service disruptions every 15 minutes and commits
+# data/signals.json, so a mid-morning incident reaches riders in minutes
+# instead of waiting for the daily data refresh.
+#
+# Caveats worth knowing (surfaced in the UI, not hidden):
+#  * GitHub's scheduled runs are best-effort — they can be delayed by 10+ min
+#    under load, so the app always displays its last-scan time.
+#  * Scheduled workflows are auto-disabled after 60 days without repo activity.
+#  * Signals publish as UNVERIFIED. Promote to data/advisories.json by hand
+#    once confirmed via @OfficialBMRCL.
+name: Scan for disruptions
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+# a long queue of these would fight over the branch
+concurrency:
+  group: scan-disruptions
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Scan news for disruptions (last 12 h)
+        run: node tools/fetch_news.mjs 12
+
+      - name: Commit the scan result
+        # Always commit, even when nothing was found: the `generated` timestamp
+        # is what lets the app promise "no disruptions as of 10:57" instead of
+        # an open-ended all-clear. ~4 commits/hour stays under Pages' build
+        # limits.
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/signals.json
+          git diff --cached --quiet || {
+            git commit -m "chore: disruption scan $(date -u +%H:%MZ)"
+            git push
+          }

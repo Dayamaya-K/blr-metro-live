@@ -1,0 +1,14 @@
+{
+  "updated": "2026-08-06T00:00:00+05:30",
+  "_howto": "Human-vetted advisories, shown as authoritative. Fields: title (required), lines (array of purple/green/yellow; omit or leave empty for network-wide), severity (info|warning|disruption), detail, url (source link), from/to (ISO datetimes). Omitting 'to' keeps an advisory active until you remove it — set it once service is restored. An advisory whose 'to' has passed still shows for 3 hours marked 'may be resolved', then disappears. Unverified machine-scanned reports live in signals.json (written by tools/fetch_news.mjs) and render as dashed 'Unconfirmed report' cards; promote one here after confirming via @OfficialBMRCL.",
+  "_example": {
+    "title": "Yellow Line running with delays",
+    "detail": "Technical snag at Jayadeva; trains turning back at Central Silk Board.",
+    "lines": ["yellow"],
+    "severity": "disruption",
+    "url": "https://x.com/OfficialBMRCL/status/…",
+    "from": "2026-08-06T08:00:00+05:30",
+    "to": "2026-08-06T12:00:00+05:30"
+  },
+  "items": []
+}

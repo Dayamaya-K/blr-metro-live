@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f4eee2">
+  <title>BLR Metro Live — Namma Metro train map</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚇</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <!-- bump ?v= on each deploy so browsers don't serve stale CSS/JS -->
+  <link rel="stylesheet" href="css/style.css?v=4">
+</head>
+<body>
+  <div id="map"></div>
+
+  <div id="panel">
+    <div id="panel-head">
+      <div>
+        <div class="kick">Namma Metro · Bengaluru</div>
+        <h1>BLR Metro Live</h1>
+      </div>
+      <button id="panel-toggle" title="collapse panel">▾</button>
+    </div>
+    <div id="clock">--:--:--</div>
+    <div id="date-label"></div>
+
+    <div id="advisories"></div>
+    <div id="alert-status" class="alert-status"></div>
+
+    <div id="panel-body">
+    <div id="search-row">
+      <div id="search-wrap">
+        <input id="search" type="text" placeholder="Find your station…" autocomplete="off" spellcheck="false">
+        <div id="search-results" hidden></div>
+      </div>
+      <button id="btn-geo" title="Find nearest station">📍</button>
+    </div>
+    <div id="geo-status"></div>
+
+    <div id="controls">
+      <button id="btn-live" class="active">LIVE</button>
+      <button id="btn-pause" title="pause / play">❚❚</button>
+      <button data-speed="10">10×</button>
+      <button data-speed="60" class="active">60×</button>
+      <button data-speed="300">300×</button>
+    </div>
+    <input id="time-slider" type="range" min="0" max="86399" step="30" value="0">
+
+    <div id="lines"></div>
+    <div id="future"></div>
+    <div id="total-count"></div>
+
+    <div id="credit">
+      Simulated from the <a href="https://english.bmrc.co.in/metro-timings/" target="_blank" rel="noopener">BMRCL timetable</a>
+      — not live telemetry. <a href="#" id="tt-open">View timetable</a><br>
+      Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors.
+    </div>
+    </div>
+  </div>
+
+  <div id="line-card" hidden>
+    <button id="line-card-close" title="close">×</button>
+    <div class="kick">Line updates</div>
+    <h2 id="line-card-name"></h2>
+    <div id="line-card-stage" class="line-card-stage"></div>
+    <div id="line-card-news"></div>
+    <div id="line-card-more" class="future-note"></div>
+  </div>
+
+  <div id="tt-overlay" hidden>
+    <div id="tt-card">
+      <button id="tt-close" title="close">×</button>
+      <div class="kick">Modelled service pattern</div>
+      <h2>Timetable</h2>
+      <div id="tt-body"></div>
+      <div class="tt-note">
+        This is the timetable the simulation runs on.<span id="tt-src"></span>
+        For the authoritative version, see
+        <a href="https://english.bmrc.co.in/metro-timings/" target="_blank" rel="noopener">BMRCL metro timings</a>
+        or <a href="https://x.com/OfficialBMRCL" target="_blank" rel="noopener">@OfficialBMRCL</a>
+        (helpline 1800-425-12345).
+      </div>
+    </div>
+  </div>
+
+  <div id="station-card" hidden>
+    <button id="card-close" title="close">×</button>
+    <div class="kick">Scheduled departures</div>
+    <h2 id="card-name"></h2>
+    <div id="card-dist" class="firstlast"></div>
+    <div id="card-boards"></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="js/service.js?v=4"></script>
+  <script src="js/sim.js?v=4"></script>
+  <script src="js/app.js?v=4"></script>
+</body>
+</html>

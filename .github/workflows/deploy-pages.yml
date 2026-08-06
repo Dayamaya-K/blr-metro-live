@@ -1,0 +1,49 @@
+# Deploys the site to GitHub Pages via Actions instead of the legacy
+# "deploy from a branch" build.
+#
+# Two reasons to prefer this:
+#  1. It skips Jekyll entirely — the repo is already a plain static site.
+#  2. Commits pushed by the data workflows use GITHUB_TOKEN, which does NOT
+#     trigger a `push` build. The `workflow_run` trigger below catches those,
+#     so refreshed timetables/news/signals actually reach the live site.
+#
+# Requires: Settings -> Pages -> Source = "GitHub Actions".
+name: Deploy to Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_run:
+    workflows: ["Scan for disruptions", "Refresh timetable data"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# never let two deploys race; queue them instead of cancelling, so a data
+# refresh can't be dropped
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      # enablement:true turns Pages on automatically the first time this runs,
+      # so there's no need to set Settings -> Pages -> Source by hand
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4

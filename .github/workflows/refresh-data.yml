@@ -1,0 +1,45 @@
+# Refreshes the timetable (GTFS) and under-construction corridors weekly,
+# committing to main so GitHub Pages redeploys with fresh data.
+# Advisories are intentionally NOT automated — they need human vetting
+# (run `node tools/fetch_news.mjs` locally and review the candidates).
+name: Refresh timetable data
+
+on:
+  schedule:
+    - cron: "30 0 * * *" # daily 06:00 IST (news moves faster than timetables)
+  workflow_dispatch:
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Refresh GTFS timetable
+        run: python tools/fetch_gtfs.py
+
+      - name: Refresh future corridors (best-effort)
+        run: node tools/fetch_osm.mjs --future-only
+        continue-on-error: true # Overpass mirrors are flaky; keep old data
+
+      - name: Refresh per-line news headlines
+        run: node tools/fetch_line_news.mjs
+        continue-on-error: true
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/schedule.json data/network.json data/news.json
+          git diff --cached --quiet || {
+            git commit -m "chore: refresh timetable data"
+            git push
+          }

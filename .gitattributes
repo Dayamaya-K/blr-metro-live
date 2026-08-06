@@ -1,0 +1,4 @@
+# Keep LF line endings in the repository. The GitHub Actions runners are
+# Linux, and bash fails on the stray CR that Windows checkouts would add to
+# the multi-line `run:` blocks in .github/workflows/.
+* text=auto eol=lf
