@@ -123,8 +123,11 @@ all. The app falls back to the deployed copy if raw is unreachable, which is
 also what makes local development work. Note this ties the app to the repo
 path in `RAW_DATA_BASE` (js/app.js); update it if you fork or rename.
 
-Known limits, deliberately visible rather than hidden: GitHub's scheduled runs
-are best-effort and can lag 10+ minutes (hence always showing the scan time);
+Known limits, deliberately visible rather than hidden: GitHub throttles
+scheduled workflows hard on low-activity repos — the `*/15` disruption cron
+measured roughly **every 1.5–3 hours** in practice, not every 15 minutes,
+which is exactly why the UI always states its last-scan time and warns past 90
+minutes rather than implying continuous monitoring;
 news lags the incident itself, so @OfficialBMRCL is linked from every warning;
 and post-disruption bunching isn't modelled at all, which is why affected
 boards say *scheduled* rather than predicted.

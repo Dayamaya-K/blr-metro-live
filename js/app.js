@@ -391,6 +391,7 @@ async function boot() {
   });
   setInterval(renderAlerts, 60 * 1000); // keep the "X min ago" wording current
   state.lastTick = performance.now();
+  step(state.lastTick); // paint now; rAF may be paused if we loaded hidden
   requestAnimationFrame(frame);
 }
 
@@ -939,6 +940,13 @@ function wireControls() {
 // between 250 ms ticks; panel text (clock, counts, slider) only needs the
 // slower cadence.
 function frame(now) {
+  step(now);
+  requestAnimationFrame(frame);
+}
+
+// one pass, without scheduling the next — lets boot paint immediately instead
+// of waiting on a frame that never comes in a background tab
+function step(now) {
   // rAF pauses in background tabs — clamp dt so sim mode doesn't leap on return
   const dt = Math.min(now - state.lastTick, 1000);
   state.lastTick = now;
@@ -974,7 +982,6 @@ function frame(now) {
     state.lastSlow = now;
     slowUpdates(info, counts);
   }
-  requestAnimationFrame(frame);
 }
 
 function slowUpdates(info, counts) {

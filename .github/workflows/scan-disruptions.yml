@@ -3,8 +3,11 @@
 # instead of waiting for the daily data refresh.
 #
 # Caveats worth knowing (surfaced in the UI, not hidden):
-#  * GitHub's scheduled runs are best-effort — they can be delayed by 10+ min
-#    under load, so the app always displays its last-scan time.
+#  * GitHub's scheduled runs are best-effort and heavily throttled on
+#    low-activity repos. Measured on this repo, a */15 cron actually fires
+#    roughly every 1.5-3 hours, so the app always displays its last-scan
+#    time and warns once that is over 90 minutes old. Asking for */15 still
+#    helps: it takes whatever slots GitHub is willing to give.
 #  * Scheduled workflows are auto-disabled after 60 days without repo activity.
 #  * Signals publish as UNVERIFIED. Promote to data/advisories.json by hand
 #    once confirmed via @OfficialBMRCL.
